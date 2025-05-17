@@ -9,7 +9,7 @@
 #include <deque>
 #include <map>
 #include <set>
-#include <regex>
+#include <boost/regex.hpp>
 #include <optional>
 #include <memory>
 #include <qcommandlineparser.h>
@@ -101,7 +101,7 @@ int find_best_vertical_line_location(fz_pixmap* pixmap, int relative_click_x, in
 //void get_flat_chars_from_stext_page_with_space(fz_stext_page* stext_page, std::vector<fz_stext_char*>& flat_chars, fz_stext_char* space);
 void index_equations(const std::vector<fz_stext_char*>& flat_chars, int page_number, std::map<std::wstring, std::vector<IndexedData>>& indices);
 void find_regex_matches_in_stext_page(const std::vector<fz_stext_char*>& flat_chars,
-    const std::wregex& regex,
+    const boost::wregex& regex,
     std::vector<std::pair<int, int>>& match_ranges, std::vector<std::wstring>& match_texts);
 bool is_string_numeric(const std::wstring& str);
 bool is_string_numeric_float(const std::wstring& str);

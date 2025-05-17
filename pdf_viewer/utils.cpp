@@ -1294,64 +1294,81 @@ void get_text_from_flat_chars(const std::vector<fz_stext_char*>& flat_chars, std
 
 
 std::wstring find_first_regex_match(const std::wstring& haystack, const std::wstring& regex_string) {
-    std::wregex regex(regex_string);
-    std::wsmatch match;
-    if (std::regex_search(haystack, match, regex)) {
-        return match.str();
+    try {
+        boost::wregex regex(regex_string);
+        boost::wsmatch match;
+        if (boost::regex_search(haystack, match, regex)) {
+            return match.str();
+        }
+    }
+    catch (boost::regex_error& e)
+    {
+        qDebug() << e.what();
     }
     return L"";
 }
 
 std::vector<std::wstring> find_all_regex_matches(std::wstring haystack,
-    const std::wstring& regex_string,
-    std::vector<std::pair<int, int>>* match_ranges) {
+        const std::wstring& regex_string,
+        std::vector<std::pair<int, int>>* match_ranges) {
+        std::vector<std::wstring> res;
+    try {
+        boost::wregex regex(regex_string);
+        boost::wsmatch match;
+        int skipped_length = 0;
 
-    std::wregex regex(regex_string);
-    std::wsmatch match;
-    std::vector<std::wstring> res;
-    int skipped_length = 0;
 
-    while (std::regex_search(haystack, match, regex)) {
-        for (size_t i = 0; i < match.size(); i++) {
-            if (match[i].matched) {
-                res.push_back(match[i].str());
-                if (match_ranges) {
-                    int begin_index = match[i].first - haystack.begin();
-                    int match_length = match[i].length();
-                    match_ranges->push_back(std::make_pair(skipped_length + begin_index, skipped_length + begin_index + match_length-1));
+        while (boost::regex_search(haystack.cbegin(), haystack.cend(), match, regex)) {
+            for (size_t i = 0; i < match.size(); i++) {
+                if (match[i].matched) {
+                    res.push_back(match[i].str());
+                    if (match_ranges) {
+                        int begin_index = match[i].first - haystack.begin();
+                        int match_length = match[i].length();
+                        match_ranges->push_back(std::make_pair(skipped_length + begin_index, skipped_length + begin_index + match_length-1));
+                    }
                 }
             }
+            skipped_length += match.prefix().length() + match.length();
+            haystack = match.suffix();
         }
-        skipped_length += match.prefix().length() + match.length();
-        haystack = match.suffix();
+    }
+    catch (boost::regex_error& e)
+    {
+        qDebug() << e.what();
     }
     return res;
-
 }
 
 void find_regex_matches_in_stext_page(const std::vector<fz_stext_char*>& flat_chars,
-    const std::wregex& regex,
-    std::vector<std::pair<int, int>>& match_ranges, std::vector<std::wstring>& match_texts) {
+        const boost::wregex& regex,
+        std::vector<std::pair<int, int>>& match_ranges, std::vector<std::wstring>& match_texts) {
+    try {
 
-    std::wstring page_string;
-    std::vector<int> indices;
+        std::wstring page_string;
+        std::vector<int> indices;
 
-    get_text_from_flat_chars(flat_chars, page_string, indices);
+        get_text_from_flat_chars(flat_chars, page_string, indices);
 
-    std::wsmatch match;
+        boost::wsmatch match;
+        int offset = 0;
 
-    int offset = 0;
-    while (std::regex_search(page_string, match, regex)) {
-        int start_index = offset + match.position();
-        int end_index = start_index + match.length() - 1;
-        match_ranges.push_back(std::make_pair(indices[start_index], indices[end_index]));
-        match_texts.push_back(match.str());
+        while (boost::regex_search(page_string, match, regex)) {
+            int start_index = offset + match.position();
+            int end_index = start_index + match.length() - 1;
+            match_ranges.push_back(std::make_pair(indices[start_index], indices[end_index]));
+            match_texts.push_back(match.str());
 
-        int old_length = page_string.size();
-        page_string = match.suffix();
-        int new_length = page_string.size();
+            int old_length = page_string.size();
+            page_string = match.suffix();
+            int new_length = page_string.size();
 
-        offset += (old_length - new_length);
+            offset += (old_length - new_length);
+        }
+    }
+    catch (boost::regex_error& e)
+    {
+        qDebug() << e.what();
     }
 }
 
@@ -1409,39 +1426,45 @@ void index_generic(const std::vector<fz_stext_char*>& flat_chars, int page_numbe
         }
     }
 
-    std::wregex index_dst_regex(L"(^|\n)[A-Z][a-zA-Z]{2,}\\.?[ \t]+[0-9]+(\\.[0-9]+)*");
-    //std::wregex index_dst_regex(L"(^|\n)[A-Z][a-zA-Z]{2,}[ \t]+[0-9]+(\-[0-9]+)*");
-    //std::wregex index_src_regex(L"[a-zA-Z]{3,}[ \t]+[0-9]+(\.[0-9]+)*");
-    std::wsmatch match;
+    try {
+        boost::wregex index_dst_regex(L"(^|\n)[A-Z][a-zA-Z]{2,}\\.?[ \t]+[0-9]+(\\.[0-9]+)*");
+        //boost::wregex index_dst_regex(L"(^|\n)[A-Z][a-zA-Z]{2,}[ \t]+[0-9]+(\-[0-9]+)*");
+        //boost::wregex index_src_regex(L"[a-zA-Z]{3,}[ \t]+[0-9]+(\.[0-9]+)*");
+        boost::wsmatch match;
 
 
-    int offset = 0;
-    while (std::regex_search(page_string, match, index_dst_regex)) {
+        int offset = 0;
+        while (boost::regex_search(page_string, match, index_dst_regex)) {
 
-        IndexedData new_data;
-        new_data.page = page_number;
-        std::wstring match_string = match.str();
-        new_data.text = strip_string(match_string);
-        new_data.y_offset = 0.0f;
+            IndexedData new_data;
+            new_data.page = page_number;
+            std::wstring match_string = match.str();
+            new_data.text = strip_string(match_string);
+            new_data.y_offset = 0.0f;
 
-        int match_start_index = match.position();
-        int match_size = match_string.size();
-        for (int i = 0; i < match_size; i++) {
-            int index = offset + match_start_index + i;
-            if (page_rects[index]) {
-                new_data.y_offset = page_rects[index].value().y0;
-                break;
+            int match_start_index = match.position();
+            int match_size = match_string.size();
+            for (int i = 0; i < match_size; i++) {
+                int index = offset + match_start_index + i;
+                if (page_rects[index]) {
+                    new_data.y_offset = page_rects[index].value().y0;
+                    break;
+                }
             }
-        }
-        offset += match_start_index + match_size;
-        page_string = match.suffix();
+            offset += match_start_index + match_size;
+            page_string = match.suffix();
 
-        indices.push_back(new_data);
+            indices.push_back(new_data);
+        }
+    }
+    catch (boost::regex_error& e)
+    {
+        qDebug() << e.what();
     }
 }
 
 void index_equations(const std::vector<fz_stext_char*>& flat_chars, int page_number, std::map<std::wstring, std::vector<IndexedData>>& indices) {
-    std::wregex regex(L"\\([0-9]+(\\.[0-9]+)*\\)");
+    boost::wregex regex(L"\\([0-9]+(\\.[0-9]+)*\\)");
     std::vector<std::pair<int, int>> match_ranges;
     std::vector<std::wstring> match_texts;
 
@@ -2261,10 +2284,10 @@ bool is_string_titlish(const std::wstring& str) {
     if (str.size() <= 5 || str.size() >= 60) {
         return false;
     }
-    std::wregex regex(L"([0-9IVXC]+\\.)+([0-9IVXC]+)*");
-    std::wsmatch match;
+    boost::wregex regex(L"([0-9IVXC]+\\.)+([0-9IVXC]+)*");
+    boost::wsmatch match;
 
-    std::regex_search(str, match, regex);
+    boost:regex_search(str, match, regex);
     int pos = match.position();
     int size = match.length();
     return (size > 0) && (pos == 0);
@@ -3718,7 +3741,7 @@ std::wstring get_paper_name_from_reference_text(std::wstring reference_text) {
 fz_rect get_first_page_size(fz_context* ctx, const std::wstring& document_path) {
     std::string path = utf8_encode(document_path);
     bool failed = false;
-    
+
     fz_rect bounds;
 
     fz_try(ctx) {
@@ -3995,84 +4018,90 @@ std::vector<SearchResult> search_regex_with_index(const std::wstring& super_fast
 {
 
     std::vector<SearchResult> output;
-
-    std::wregex regex;
-    if (min_page < 0) min_page = 0;
-    if (max_page > page_begin_indices.size() - 1) max_page = page_begin_indices.size() - 1;
-
     try {
-        if (case_sensitive != SearchCaseSensitivity::CaseSensitive) {
-            regex = std::wregex(query, std::regex_constants::icase);
-        }
-        else {
-            regex = std::wregex(query);
-        }
-    }
-    catch (const std::regex_error&) {
-        return output;
-    }
 
+        boost::wregex regex;
+        if (min_page < 0) min_page = 0;
+        if (max_page > page_begin_indices.size() - 1) max_page = page_begin_indices.size() - 1;
 
-    std::vector<SearchResult> before_results;
-    bool is_before = true;
-
-    int offset = page_begin_indices[min_page];
-
-    std::wstring::const_iterator search_start(super_fast_search_index.begin() + offset);
-
-    std::wsmatch match;
-    int empty_tolerance = 1000;
-
-
-    int match_page = min_page;
-
-    while (std::regex_search(search_start, super_fast_search_index.cend(), match, regex)) {
-        std::deque<fz_rect> match_rects;
-        std::vector<fz_rect> compressed_match_rects;
-
-        //int match_page = super_fast_search_index_pages[offset + match.position()];
-
-        if (match_page >= begin_page) {
-            is_before = false;
-        }
-
-        if (match_page > max_page) {
-            break;
-        }
-
-        int start_index = offset + match.position();
-        int end_index = offset + match.position() + match.length();
-
-        while ((match_page < page_begin_indices.size() - 1) && page_begin_indices[match_page + 1] < start_index) {
-            match_page++;
-        }
-
-        if (start_index < end_index) {
-            SearchResult res;
-            res.page = match_page;
-            res.begin_index_in_page = start_index - page_begin_indices[match_page];
-            res.end_index_in_page = end_index - page_begin_indices[match_page];
-
-            if (!((match_page < min_page) || (match_page > max_page))) {
-                if (is_before) {
-                    before_results.push_back(res);
-                }
-                else {
-                    output.push_back(res);
-                }
+        try {
+            if (case_sensitive != SearchCaseSensitivity::CaseSensitive) {
+                regex = boost::wregex(query, boost::regex_constants::icase);
+            }
+            else {
+                regex = boost::wregex(query);
             }
         }
-        else {
-            empty_tolerance--;
-            if (empty_tolerance == 0) {
+        catch (const boost::regex_error&) {
+            return output;
+        }
+
+
+        std::vector<SearchResult> before_results;
+        bool is_before = true;
+
+        int offset = page_begin_indices[min_page];
+
+        std::wstring::const_iterator search_start(super_fast_search_index.begin() + offset);
+
+        boost::wsmatch match;
+        int empty_tolerance = 1000;
+
+
+        int match_page = min_page;
+
+        while (boost::regex_search(search_start, super_fast_search_index.cend(), match, regex)) {
+            std::deque<fz_rect> match_rects;
+            std::vector<fz_rect> compressed_match_rects;
+
+            //int match_page = super_fast_search_index_pages[offset + match.position()];
+
+            if (match_page >= begin_page) {
+                is_before = false;
+            }
+
+            if (match_page > max_page) {
                 break;
             }
-        }
 
-        offset = end_index;
-        search_start = match.suffix().first;
+            int start_index = offset + match.position();
+            int end_index = offset + match.position() + match.length();
+
+            while ((match_page < page_begin_indices.size() - 1) && page_begin_indices[match_page + 1] < start_index) {
+                match_page++;
+            }
+
+            if (start_index < end_index) {
+                SearchResult res;
+                res.page = match_page;
+                res.begin_index_in_page = start_index - page_begin_indices[match_page];
+                res.end_index_in_page = end_index - page_begin_indices[match_page];
+
+                if (!((match_page < min_page) || (match_page > max_page))) {
+                    if (is_before) {
+                        before_results.push_back(res);
+                    }
+                    else {
+                        output.push_back(res);
+                    }
+                }
+            }
+            else {
+                empty_tolerance--;
+                if (empty_tolerance == 0) {
+                    break;
+                }
+            }
+
+            offset = end_index;
+            search_start = match.suffix().first;
+        }
+        output.insert(output.end(), before_results.begin(), before_results.end());
     }
-    output.insert(output.end(), before_results.begin(), before_results.end());
+    catch (boost::regex_error& e)
+    {
+        qDebug() << e.what();
+    }
     return output;
 
 }

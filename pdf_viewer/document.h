@@ -8,7 +8,7 @@
 #include <map>
 #include <unordered_map>
 #include <deque>
-#include <regex>
+#include <boost/regex.hpp>
 
 //#include <Windows.h>
 #include <qstandarditemmodel.h>
@@ -294,13 +294,13 @@ public:
     std::optional<std::wstring> get_paper_name_at_position(const std::vector<fz_stext_char*>& flat_chars, PagelessDocumentPos position);
     std::optional<std::wstring> get_equation_text_at_position(const std::vector<fz_stext_char*>& flat_chars, PagelessDocumentPos position, std::pair<int, int>* out_range);
     std::optional<std::pair<std::wstring, std::wstring>> get_generic_link_name_at_position(const std::vector<fz_stext_char*>& flat_chars, PagelessDocumentPos position, std::pair<int, int>* out_range);
-    std::optional<std::wstring> get_regex_match_at_position(const std::wregex& regex, const std::vector<fz_stext_char*>& flat_chars, PagelessDocumentPos position, std::pair<int, int>* out_range);
+    std::optional<std::wstring> get_regex_match_at_position(const boost::wregex& regex, const std::vector<fz_stext_char*>& flat_chars, PagelessDocumentPos position, std::pair<int, int>* out_range);
     std::optional<std::wstring> get_text_at_position(DocumentPos position);
     std::optional<std::wstring> get_reference_text_at_position(DocumentPos position, std::pair<int, int>* out_range);
     std::optional<std::wstring> get_paper_name_at_position(DocumentPos position);
     std::optional<std::wstring> get_equation_text_at_position(DocumentPos position, std::pair<int, int>* out_range);
     std::optional<std::pair<std::wstring, std::wstring>> get_generic_link_name_at_position(DocumentPos position, std::pair<int, int>* out_range);
-    std::optional<std::wstring> get_regex_match_at_position(const std::wregex& regex, DocumentPos position, std::pair<int, int>* out_range);
+    std::optional<std::wstring> get_regex_match_at_position(const boost::wregex& regex, DocumentPos position, std::pair<int, int>* out_range);
     std::vector<DocumentPos> find_generic_locations(const std::wstring& type, const std::wstring& name);
     bool can_use_highlights();
 

@@ -7,7 +7,6 @@
 #include <qfileinfo.h>
 #include <qdatetime.h>
 #include <map>
-#include <regex>
 #include <qcryptographichash.h>
 #include <qjsondocument.h>
 #include "path.h"
@@ -1531,7 +1530,7 @@ std::optional<std::wstring> Document::get_equation_text_at_position(
     int>* out_range) {
 
 
-    std::wregex regex(L"\\([0-9]+(\\.[0-9]+)*\\)");
+    boost::wregex regex(L"\\([0-9]+(\\.[0-9]+)*\\)");
     std::optional<std::wstring> match = get_regex_match_at_position(regex, flat_chars, position, out_range);
 
     if (match) {
@@ -1542,7 +1541,7 @@ std::optional<std::wstring> Document::get_equation_text_at_position(
     }
 }
 
-std::optional<std::wstring> Document::get_regex_match_at_position(const std::wregex& regex, const std::vector<fz_stext_char*>& flat_chars, PagelessDocumentPos pos, std::pair<int, int>* out_range) {
+std::optional<std::wstring> Document::get_regex_match_at_position(const boost::wregex& regex, const std::vector<fz_stext_char*>& flat_chars, PagelessDocumentPos pos, std::pair<int, int>* out_range) {
     std::vector<std::pair<int, int>> match_ranges;
     std::vector<std::wstring> match_texts;
 
@@ -1618,7 +1617,7 @@ std::optional<std::pair<std::wstring, std::wstring>> Document::get_generic_link_
     std::pair<int,
     int>* out_range) {
 
-    std::wregex regex(L"[a-zA-Z]{3,}(\\.){0,1}[ \t]+[0-9]+(\\.[0-9]+)*");
+    boost::wregex regex(L"[a-zA-Z]{3,}(\\.){0,1}[ \t]+[0-9]+(\\.[0-9]+)*");
     std::optional<std::wstring> match_string = get_regex_match_at_position(regex, flat_chars, position, out_range);
     if (match_string) {
         std::vector<std::wstring> parts = split_whitespace(match_string.value());
@@ -1707,20 +1706,26 @@ std::optional<std::wstring> Document::get_reference_text_at_position(const std::
     return {};
 }
 
-void get_matches(std::wstring haystack, const std::wregex& reg, std::vector<std::pair<int, int>>& indices) {
-    std::wsmatch match;
+void get_matches(std::wstring haystack, const boost::wregex& reg, std::vector<std::pair<int, int>>& indices) {
+    boost::wsmatch match;
 
     int offset = 0;
-    while (std::regex_search(haystack, match, reg)) {
-        int start_index = offset + match.position();
-        int end_index = start_index + match.length();
-        indices.push_back(std::make_pair(start_index, end_index));
+    try{
+        while (boost::regex_search(haystack, match, reg)) {
+            int start_index = offset + match.position();
+            int end_index = start_index + match.length();
+            indices.push_back(std::make_pair(start_index, end_index));
 
-        int old_length = haystack.size();
-        haystack = match.suffix();
-        int new_length = haystack.size();
+            int old_length = haystack.size();
+            haystack = match.suffix();
+            int new_length = haystack.size();
 
-        offset += (old_length - new_length);
+            offset += (old_length - new_length);
+        }
+    }
+    catch (boost::regex_error& e)
+    {
+        qDebug() << e.what();
     }
 }
 
@@ -2483,7 +2488,7 @@ std::optional<std::pair<std::wstring, std::wstring>>  Document::get_generic_link
     return get_generic_link_name_at_position(flat_chars,  pos.pageless(), out_range);
 }
 
-std::optional<std::wstring> Document::get_regex_match_at_position(const std::wregex& regex, DocumentPos position, std::pair<int, int>* out_range) {
+std::optional<std::wstring> Document::get_regex_match_at_position(const boost::wregex& regex, DocumentPos position, std::pair<int, int>* out_range) {
     fz_stext_page* stext_page = get_stext_with_page_number(position.page);
     std::vector<fz_stext_char*> flat_chars;
     get_flat_chars_from_stext_page(stext_page, flat_chars);
